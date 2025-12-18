@@ -518,7 +518,8 @@ def stop():
     time.sleep(1)
     # Kill any running ffmpeg processes
     subprocess.run(['pkill', '-9', '-f', 'ffmpeg'], capture_output=True)
-    return redirect(url_for('index', message='Stream stopped', type='success'))
+    subprocess.run(['pkill', '-9', '-f', 'solo_agent.py'], capture_output=True)
+    return redirect(url_for('index', message='Stream stopped', type='success', refresh='1'))
 
 @app.route('/restart', methods=['POST'])
 def restart():
