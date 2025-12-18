@@ -28,11 +28,21 @@ if [ "$EUID" -eq 0 ]; then
     exit 1
 fi
 
-echo "Step 1/5: Updating system packages..."
+echo "Step 1/6: Updating system packages..."
 sudo apt-get update
 
 echo ""
-echo "Step 2/5: Installing Docker..."
+echo "Step 2/6: Setting up network hostname..."
+if ! command -v avahi-daemon &> /dev/null; then
+    sudo apt-get install -y avahi-daemon
+fi
+sudo hostnamectl set-hostname racestream-solo
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
+echo "Hostname set to 'racestream-solo'"
+
+echo ""
+echo "Step 3/6: Installing Docker..."
 if command -v docker &> /dev/null; then
     echo "Docker already installed: $(docker --version)"
 else
@@ -44,7 +54,7 @@ else
 fi
 
 echo ""
-echo "Step 3/5: Installing Docker Compose..."
+echo "Step 4/6: Installing Docker Compose..."
 if command -v docker-compose &> /dev/null || docker compose version &> /dev/null; then
     echo "Docker Compose already installed"
 else
@@ -53,7 +63,7 @@ else
 fi
 
 echo ""
-echo "Step 4/5: Setting up RaceStream Solo..."
+echo "Step 5/6: Setting up RaceStream Solo..."
 INSTALL_DIR="/home/$USER/racestream-solo"
 
 if [ -d "$INSTALL_DIR" ]; then
@@ -70,7 +80,7 @@ fi
 mkdir -p "$INSTALL_DIR/logs"
 
 echo ""
-echo "Step 5/5: Building and starting container..."
+echo "Step 6/6: Building and starting container..."
 cd "$INSTALL_DIR"
 docker compose -f docker/docker-compose.yml build
 docker compose -f docker/docker-compose.yml up -d
@@ -83,7 +93,9 @@ echo "============================================"
 echo "  Installation Complete!"
 echo "============================================"
 echo ""
-echo "  Web UI: http://$IP_ADDR:8080"
+echo "  Web UI:"
+echo "    http://racestream-solo.local:8080"
+echo "    http://$IP_ADDR:8080"
 echo ""
 echo "  Next steps:"
 echo "  1. Open the Web UI in your browser"
