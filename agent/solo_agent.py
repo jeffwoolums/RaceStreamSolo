@@ -169,6 +169,61 @@ class SoloAgent:
                     logger.debug(f"Error checking {device}: {e}")
         return cameras
 
+    def detect_audio_device(self, video_device: str) -> Optional[str]:
+        """Detect audio device associated with a video device.
+
+        Maps video devices to their corresponding ALSA audio devices
+        by matching USB device names.
+        """
+        try:
+            # Get the video device name
+            result = subprocess.run(
+                ['v4l2-ctl', '-d', video_device, '--all'],
+                capture_output=True, text=True, timeout=5
+            )
+            video_name = ""
+            for line in result.stdout.split('\n'):
+                if 'Card type' in line:
+                    video_name = line.split(':')[1].strip().lower()
+                    break
+
+            if not video_name:
+                return None
+
+            # Read audio cards and try to match
+            with open('/proc/asound/cards', 'r') as f:
+                cards_info = f.read()
+
+            # Parse audio cards
+            for line in cards_info.split('\n'):
+                if '[' in line and ']:' in line:
+                    # Extract card number and name
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        card_num = parts[0].strip()
+                        # Get the descriptive name from next part
+                        card_name = line.split('- ')[1].strip().lower() if '- ' in line else ""
+
+                        # Match by partial name (e.g., "osmo" matches "OsmoAction5pro")
+                        if any(keyword in card_name for keyword in ['osmo', 'gopro', 'action']):
+                            if 'osmo' in video_name.lower() or 'action' in video_name.lower():
+                                audio_device = f"hw:{card_num}"
+                                logger.info(f"Found audio device {audio_device} for {video_device}")
+                                return audio_device
+
+                        # Also check if video name keywords appear in audio card
+                        video_keywords = video_name.replace('_', ' ').split()
+                        for keyword in video_keywords:
+                            if len(keyword) > 3 and keyword in card_name:
+                                audio_device = f"hw:{card_num}"
+                                logger.info(f"Found audio device {audio_device} for {video_device}")
+                                return audio_device
+
+            return None
+        except Exception as e:
+            logger.debug(f"Error detecting audio for {video_device}: {e}")
+            return None
+
     def build_overlay_filter(self) -> str:
         """Build ffmpeg filter for overlay."""
         filters = []
@@ -391,6 +446,9 @@ class SoloAgent:
             logger.error("No stream key configured for rotation mode")
             return []
 
+        # Check for audio device associated with this camera
+        audio_device = self.detect_audio_device(camera.device)
+
         cmd = [
             'ffmpeg',
             '-hide_banner',
@@ -402,11 +460,23 @@ class SoloAgent:
             '-framerate', str(camera.fps),
             '-input_format', 'mjpeg',
             '-i', camera.device,
+        ]
 
-            # Generate silent audio
-            '-f', 'lavfi',
-            '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+        # Add audio input - real audio if available, otherwise silent
+        if audio_device:
+            logger.info(f"Using real audio from {audio_device} for camera {camera.name}")
+            cmd.extend([
+                '-f', 'alsa',
+                '-i', audio_device,
+            ])
+        else:
+            logger.info(f"No audio device for {camera.name}, using silent audio")
+            cmd.extend([
+                '-f', 'lavfi',
+                '-i', 'anullsrc=channel_layout=stereo:sample_rate=44100',
+            ])
 
+        cmd.extend([
             # Video encoding
             '-c:v', 'libx264',
             '-preset', self.output.preset,
@@ -426,7 +496,7 @@ class SoloAgent:
             # Output format
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
-        ]
+        ])
 
         # Add overlay filter if enabled
         overlay_filter = self.build_overlay_filter()

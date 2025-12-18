@@ -1,11 +1,12 @@
 FROM python:3.11-slim-bookworm
 
-# Install ffmpeg and v4l utilities
+# Install ffmpeg, v4l utilities, and ALSA for audio
 RUN apt-get update && apt-get install -y \
     ffmpeg \
     v4l-utils \
     fonts-dejavu-core \
     procps \
+    alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Create app directory
