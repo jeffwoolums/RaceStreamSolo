@@ -495,6 +495,9 @@ class SoloAgent:
             '-b:a', self.output.audio_bitrate,
             '-ar', '44100',
 
+            # Audio fade-in to prevent pop on switch (0.3 second fade)
+            '-af', 'afade=t=in:st=0:d=0.3',
+
             # Output format
             '-f', 'flv',
             '-flvflags', 'no_duration_filesize',
