@@ -201,18 +201,28 @@ HTML_TEMPLATE = '''
         <!-- Cameras Card -->
         <div class="card">
             <h2>Cameras</h2>
-            <div class="grid">
-                {% for cam in config.cameras %}
-                <div class="camera-card">
-                    <h3>{{ cam.name }}</h3>
-                    <p class="camera-status">{{ cam.device }}</p>
-                    <p class="camera-status">{{ cam.resolution }} @ {{ cam.fps }}fps</p>
-                    <p style="color: {{ '#00c853' if cam.enabled else '#ff5252' }}">
-                        {{ 'Enabled' if cam.enabled else 'Disabled' }}
-                    </p>
+            <form action="/update_cameras" method="post">
+                <div class="grid">
+                    {% for cam in config.cameras %}
+                    <div class="camera-card">
+                        <input type="text" name="cam_name_{{ loop.index0 }}" value="{{ cam.name }}"
+                               style="background: #1a1a2e; border: 1px solid #0f3460; color: #00d4ff;
+                                      font-size: 1.1em; font-weight: bold; text-align: center;
+                                      width: 100%; padding: 5px; border-radius: 5px; margin-bottom: 8px;">
+                        <input type="hidden" name="cam_device_{{ loop.index0 }}" value="{{ cam.device }}">
+                        <p class="camera-status">{{ cam.device }}</p>
+                        <p class="camera-status">{{ cam.resolution }} @ {{ cam.fps }}fps</p>
+                        <label class="toggle" style="margin-top: 8px;">
+                            <input type="checkbox" name="cam_enabled_{{ loop.index0 }}" {{ 'checked' if cam.enabled }}>
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-size: 0.85em; color: #aaa; margin-left: 8px;">Enabled</span>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
+                <input type="hidden" name="cam_count" value="{{ config.cameras | length }}">
+                <button type="submit" class="btn btn-primary" style="margin-top: 15px;">Save Camera Settings</button>
+            </form>
         </div>
 
         <!-- Discover Cameras Card -->
@@ -533,6 +543,27 @@ def switch():
     camera = request.form.get('camera')
     # TODO: Implement manual switch via IPC
     return redirect(url_for('index', message=f'Switching to {camera}...', type='success'))
+
+@app.route('/update_cameras', methods=['POST'])
+def update_cameras():
+    config = load_config()
+    cam_count = int(request.form.get('cam_count', 0))
+
+    for i in range(cam_count):
+        new_name = request.form.get(f'cam_name_{i}', '')
+        device = request.form.get(f'cam_device_{i}', '')
+        enabled = f'cam_enabled_{i}' in request.form
+
+        # Find camera by device and update
+        for cam in config.get('cameras', []):
+            if cam['device'] == device:
+                if new_name:
+                    cam['name'] = new_name
+                cam['enabled'] = enabled
+                break
+
+    save_config(config)
+    return redirect(url_for('index', message='Camera settings saved!', type='success'))
 
 @app.route('/discover', methods=['POST'])
 def discover():
