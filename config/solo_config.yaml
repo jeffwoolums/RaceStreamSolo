@@ -1,0 +1,58 @@
+# RaceStream Solo Configuration
+# Mode: 'standalone' for direct YouTube streaming, 'coordinator' for TRED Edge Router
+mode: standalone
+
+# YouTube Live Stream URL (for Watch Live button)
+youtube_url: https://youtube.com/watch?v=Fek0ocDjGzc
+
+# Coordinator URL (only used in coordinator mode)
+coordinator_url: rtmp://192.168.1.1:1935/live
+
+# Camera Configuration
+cameras:
+  - device: /dev/video0
+    name: front_cam
+    resolution: 1920x1080
+    fps: 30
+    enabled: true
+
+  - device: /dev/video2
+    name: rear_cam
+    resolution: 1920x1080
+    fps: 30
+    enabled: true
+
+# Output Configuration
+output:
+  platform: youtube
+  rtmp_url: rtmp://a.rtmp.youtube.com/live2
+  video_bitrate: 4500k
+  audio_bitrate: 128k
+  preset: ultrafast
+  keyframe_interval: 2  # seconds
+
+# Rotation Mode - cycle between cameras on single stream
+rotation:
+  enabled: true
+  interval: 15  # seconds between camera switches
+  stream_key: p7u4-mu2x-9us4-c4d5-9pyc  # Single YouTube stream key (reusable)
+
+# Stream Keys - for dual ingest mode (rotation.enabled: false)
+stream_keys:
+  front_cam: 602p-r5zj-afwp-tx9p-d3x9
+  rear_cam: umw4-w8wa-vr0h-47pe-0kgc
+
+# Overlay Configuration
+overlay:
+  enabled: true
+  text: "RaceStream Solo"
+  text_position: top-center
+  show_timestamp: true
+  font_size: 48
+  font_color: white
+
+# Encoding Options
+encoding:
+  hardware_accel: false  # Set to true for Pi 4/5 hardware encoding
+  tune: zerolatency
+  profile: baseline

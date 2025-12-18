@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  racestream-solo:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: racestream-solo
+    restart: unless-stopped
+
+    # Camera access
+    devices:
+      - /dev/video0:/dev/video0
+      - /dev/video2:/dev/video2
+
+    # Config and overlays as volumes for easy editing
+    volumes:
+      - ../config:/app/config
+      - ../overlays:/app/overlays
+      - ../logs:/app/logs
+
+    environment:
+      - CONFIG_PATH=/app/config/solo_config.yaml
+      - TZ=America/Los_Angeles
+
+    # Network for potential web UI
+    network_mode: host
+
+    # Privileged for camera access
+    privileged: true
