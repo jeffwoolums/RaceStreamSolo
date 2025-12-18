@@ -411,28 +411,30 @@ def save_config(config):
 def get_stream_status():
     """Get current streaming status."""
     try:
-        # Check if ffmpeg is running (more reliable than checking for agent)
+        # Check if ffmpeg is streaming to rtmp (more specific check)
         result = subprocess.run(
-            ['pgrep', '-f', 'ffmpeg'],
-            capture_output=True
+            ['pgrep', '-f', 'ffmpeg.*rtmp'],
+            capture_output=True,
+            shell=False
         )
-        running = result.returncode == 0
+        # pgrep with pattern might not work, use ps instead
+        result = subprocess.run(
+            ['ps', 'aux'],
+            capture_output=True, text=True
+        )
 
-        # Try to get current camera from process
+        running = False
         current_camera = None
-        if running:
-            result = subprocess.run(
-                ['ps', 'aux'],
-                capture_output=True, text=True
-            )
-            if result.stdout:
-                for line in result.stdout.split('\n'):
-                    if 'ffmpeg' in line and 'rtmp' in line:
-                        if '/dev/video0' in line:
-                            current_camera = 'front_cam'
-                        elif '/dev/video2' in line:
-                            current_camera = 'rear_cam'
-                        break
+
+        if result.stdout:
+            for line in result.stdout.split('\n'):
+                if 'ffmpeg' in line and 'rtmp' in line:
+                    running = True
+                    if '/dev/video0' in line:
+                        current_camera = 'front_cam'
+                    elif '/dev/video2' in line:
+                        current_camera = 'rear_cam'
+                    break
 
         return {'running': running, 'current_camera': current_camera}
     except:
@@ -522,11 +524,16 @@ def stop():
     # Create stop flag to signal agent to stop
     Path('/tmp/racestream_stop').touch()
     import time
-    time.sleep(1)
+    time.sleep(0.5)
     # Kill any running ffmpeg processes
     subprocess.run(['pkill', '-9', '-f', 'ffmpeg'], capture_output=True)
     subprocess.run(['pkill', '-9', '-f', 'solo_agent.py'], capture_output=True)
-    return redirect(url_for('index', message='Stream stopped', type='success', refresh='1'))
+    # Wait for processes to fully terminate
+    time.sleep(1.5)
+    # Verify they're dead
+    subprocess.run(['pkill', '-9', '-f', 'ffmpeg'], capture_output=True)
+    time.sleep(0.5)
+    return redirect(url_for('index', message='Stream stopped', type='success'))
 
 @app.route('/restart', methods=['POST'])
 def restart():
