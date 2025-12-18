@@ -14,10 +14,12 @@ Turn your Raspberry Pi into a professional multi-camera live streaming device. C
 
 - **Multi-Camera Support** - Connect 2+ USB cameras (webcams, GoPro, DJI Osmo Action, etc.)
 - **Automatic Rotation** - Seamlessly switch between cameras at configurable intervals
+- **Audio Support** - Auto-detect camera audio with smooth fade transitions
 - **Web UI** - Easy configuration from any device on your network
 - **Overlay Support** - Add text and timestamp to your stream
 - **YouTube Integration** - Stream directly to YouTube Live
-- **Camera Discovery** - Auto-detect connected cameras
+- **Camera Discovery** - Auto-detect connected cameras with audio devices
+- **Network Discovery** - Access via `racestream-solo.local` on any network
 - **Log Viewer** - Monitor streaming status in real-time
 
 ## Quick Install
@@ -58,11 +60,19 @@ Tested with:
 
 ### Web UI
 
-After installation, access the web interface:
+After installation, access the web interface from any device on your network:
+
+```
+http://racestream-solo.local:8080
+```
+
+Or use the IP address directly:
 
 ```
 http://<raspberry-pi-ip>:8080
 ```
+
+The installer automatically configures the hostname `racestream-solo` so you can always find your device at `racestream-solo.local` on any network.
 
 ### Configuration
 
@@ -115,11 +125,13 @@ cameras:
     resolution: 1920x1080
     fps: 30
     enabled: true
+    audio_device: ""  # auto-detect or specify like "hw:0"
   - device: /dev/video2
     name: rear_cam
     resolution: 1920x1080
     fps: 30
     enabled: true
+    audio_device: ""  # auto-detect or specify like "hw:3"
 
 rotation:
   enabled: true
