@@ -536,20 +536,35 @@ class SoloAgent:
             new_process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE
+                stderr=subprocess.PIPE,
+                stdin=subprocess.PIPE  # Allow sending 'q' for graceful stop
             )
 
             # Brief overlap - let new stream establish
             time.sleep(2)
 
-            # Now stop old stream
+            # Now stop old stream gracefully using SIGINT (like Ctrl+C)
+            # This allows ffmpeg to flush audio buffers and close cleanly
             if old_process and old_process.poll() is None:
-                logger.info(f"Stopping old camera {old_camera_name}")
-                old_process.terminate()
+                logger.info(f"Stopping old camera {old_camera_name} (graceful SIGINT)")
+                import signal as sig
+                try:
+                    # SIGINT allows ffmpeg to finish gracefully, flushing buffers
+                    old_process.send_signal(sig.SIGINT)
+                except:
+                    pass
+
+                # Give it time to flush and close gracefully
                 try:
                     old_process.wait(timeout=3)
                 except subprocess.TimeoutExpired:
-                    old_process.kill()
+                    # If graceful didn't work, terminate
+                    logger.warning(f"Graceful stop timeout, forcing {old_camera_name}")
+                    old_process.terminate()
+                    try:
+                        old_process.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        old_process.kill()
 
                 with self.lock:
                     if old_camera_name in self.ffmpeg_processes:
