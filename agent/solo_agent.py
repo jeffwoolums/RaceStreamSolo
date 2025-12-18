@@ -37,6 +37,7 @@ class CameraConfig:
     resolution: str = "1920x1080"
     fps: int = 30
     enabled: bool = True
+    audio_device: str = ""  # ALSA device like "hw:3" or empty for auto-detect
 
 
 @dataclass
@@ -107,7 +108,8 @@ class SoloAgent:
                 name=cam.get('name', 'camera'),
                 resolution=cam.get('resolution', '1920x1080'),
                 fps=cam.get('fps', 30),
-                enabled=cam.get('enabled', True)
+                enabled=cam.get('enabled', True),
+                audio_device=cam.get('audio_device', '')  # Empty means auto-detect
             ))
 
         # Output
@@ -446,8 +448,8 @@ class SoloAgent:
             logger.error("No stream key configured for rotation mode")
             return []
 
-        # Check for audio device associated with this camera
-        audio_device = self.detect_audio_device(camera.device)
+        # Check for audio device - use config first, then auto-detect
+        audio_device = camera.audio_device if camera.audio_device else self.detect_audio_device(camera.device)
 
         cmd = [
             'ffmpeg',

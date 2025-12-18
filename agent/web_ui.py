@@ -212,6 +212,11 @@ HTML_TEMPLATE = '''
                         <input type="hidden" name="cam_device_{{ loop.index0 }}" value="{{ cam.device }}">
                         <p class="camera-status">{{ cam.device }}</p>
                         <p class="camera-status">{{ cam.resolution }} @ {{ cam.fps }}fps</p>
+                        <p class="camera-status">
+                            Audio: <input type="text" name="cam_audio_{{ loop.index0 }}" value="{{ cam.audio_device if cam.audio_device else '' }}"
+                                   placeholder="auto" style="background: #1a1a2e; border: 1px solid #0f3460; color: #aaa;
+                                   width: 60px; padding: 2px 5px; border-radius: 3px; font-size: 0.85em;">
+                        </p>
                         <label class="toggle" style="margin-top: 8px;">
                             <input type="checkbox" name="cam_enabled_{{ loop.index0 }}" {{ 'checked' if cam.enabled }}>
                             <span class="slider"></span>
@@ -239,12 +244,13 @@ HTML_TEMPLATE = '''
                     <div class="cam-info">
                         <div class="cam-name">{{ cam.model }}</div>
                         <div class="cam-detail">{{ cam.device }} | {{ cam.best_resolution() }} | {{ 'MJPEG' if cam.supports_mjpeg() else 'YUYV' }}</div>
-                        <div class="cam-detail">Formats: {{ cam.formats | join(', ') }}</div>
+                        <div class="cam-detail">Audio: {{ cam.audio_device if cam.audio_device else 'None detected' }}</div>
                     </div>
                     <form action="/add_camera" method="post" style="margin: 0;">
                         <input type="hidden" name="device" value="{{ cam.device }}">
                         <input type="hidden" name="model" value="{{ cam.model }}">
                         <input type="hidden" name="resolution" value="{{ cam.best_resolution() }}">
+                        <input type="hidden" name="audio_device" value="{{ cam.audio_device }}">
                         <button type="submit" class="btn btn-success btn-sm">Add to Config</button>
                     </form>
                 </div>
@@ -554,6 +560,7 @@ def update_cameras():
         new_name = request.form.get(f'cam_name_{i}', '')
         device = request.form.get(f'cam_device_{i}', '')
         enabled = f'cam_enabled_{i}' in request.form
+        audio_device = request.form.get(f'cam_audio_{i}', '').strip()
 
         # Find camera by device and update
         for cam in config.get('cameras', []):
@@ -561,6 +568,11 @@ def update_cameras():
                 if new_name:
                     cam['name'] = new_name
                 cam['enabled'] = enabled
+                # Update audio device - empty string means auto-detect
+                if audio_device:
+                    cam['audio_device'] = audio_device
+                elif 'audio_device' in cam:
+                    del cam['audio_device']  # Remove to enable auto-detect
                 break
 
     save_config(config)
@@ -575,6 +587,7 @@ def add_camera():
     device = request.form.get('device')
     model = request.form.get('model')
     resolution = request.form.get('resolution', '1920x1080')
+    audio_device = request.form.get('audio_device', '')
 
     config = load_config()
 
@@ -591,16 +604,21 @@ def add_camera():
     if 'cameras' not in config:
         config['cameras'] = []
 
-    config['cameras'].append({
+    cam_config = {
         'device': device,
         'name': name,
         'resolution': resolution,
         'fps': 30,
         'enabled': True
-    })
+    }
+    if audio_device:
+        cam_config['audio_device'] = audio_device
+
+    config['cameras'].append(cam_config)
 
     save_config(config)
-    return redirect(url_for('index', message=f'Added {model} as {name}', type='success'))
+    audio_msg = f' with audio ({audio_device})' if audio_device else ''
+    return redirect(url_for('index', message=f'Added {model} as {name}{audio_msg}', type='success'))
 
 @app.route('/logs')
 def logs():

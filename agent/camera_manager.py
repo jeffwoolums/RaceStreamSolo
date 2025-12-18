@@ -26,6 +26,7 @@ class Camera:
     formats: List[str] = field(default_factory=list)
     enabled: bool = True
     is_capture: bool = True  # True if it's a video capture device
+    audio_device: str = ""  # ALSA device like "hw:3"
 
     def best_resolution(self) -> str:
         """Get best available resolution."""
@@ -38,6 +39,10 @@ class Camera:
     def supports_mjpeg(self) -> bool:
         """Check if camera supports MJPEG."""
         return 'MJPG' in self.formats or 'mjpeg' in str(self.formats).lower()
+
+    def has_audio(self) -> bool:
+        """Check if camera has audio."""
+        return bool(self.audio_device)
 
 
 class CameraManager:
@@ -119,6 +124,37 @@ class CameraManager:
         except:
             return False
 
+    def _detect_audio_device(self, model: str) -> str:
+        """Detect audio device for a camera by matching model name."""
+        try:
+            with open('/proc/asound/cards', 'r') as f:
+                cards_info = f.read()
+
+            model_lower = model.lower()
+
+            for line in cards_info.split('\n'):
+                if '[' in line and ']:' in line:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        card_num = parts[0].strip()
+                        card_name = line.split('- ')[1].strip().lower() if '- ' in line else ""
+
+                        # Match by keywords from model name
+                        model_keywords = ['osmo', 'gopro', 'action', 'hero']
+                        for keyword in model_keywords:
+                            if keyword in model_lower and keyword in card_name:
+                                return f"hw:{card_num}"
+
+                        # Try matching model words to card name
+                        for word in model_lower.replace('_', ' ').split():
+                            if len(word) > 3 and word in card_name:
+                                return f"hw:{card_num}"
+
+            return ""
+        except Exception as e:
+            logger.debug(f"Error detecting audio: {e}")
+            return ""
+
     def _get_camera_info(self, device: str, model: str) -> Optional[Camera]:
         """Get detailed info about a camera."""
         try:
@@ -155,13 +191,17 @@ class CameraManager:
             dev_num = device.replace('/dev/video', '')
             friendly_name = f"cam{dev_num}"
 
+            # Detect audio device
+            audio_device = self._detect_audio_device(model)
+
             return Camera(
                 device=device,
                 name=friendly_name,
                 model=model,
                 resolutions=resolutions,
                 formats=formats,
-                is_capture=True
+                is_capture=True,
+                audio_device=audio_device
             )
 
         except Exception as e:
