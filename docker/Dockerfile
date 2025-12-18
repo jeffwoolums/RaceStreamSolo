@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY agent/ /app/agent/
 COPY config/ /app/config/
 COPY overlays/ /app/overlays/
+COPY static/ /app/static/
 
 # Create directories
 RUN mkdir -p /app/logs /app/overlays/templates

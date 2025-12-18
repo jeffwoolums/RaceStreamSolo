@@ -7,11 +7,11 @@ Lightweight Flask-based configuration and control interface.
 import os
 import yaml
 import subprocess
-from flask import Flask, render_template_string, request, jsonify, redirect, url_for
+from flask import Flask, render_template_string, request, jsonify, redirect, url_for, send_from_directory
 from pathlib import Path
 from camera_manager import CameraManager
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='/app/static')
 camera_manager = CameraManager()
 
 CONFIG_PATH = os.environ.get('CONFIG_PATH', '/app/config/solo_config.yaml')
@@ -161,8 +161,9 @@ HTML_TEMPLATE = '''
 </head>
 <body>
     <div class="container">
-        <h1>RaceStream Solo</h1>
-        <p class="subtitle">Standalone Streaming Device</p>
+        <div style="text-align: center; margin-bottom: 20px;">
+            <img src="/static/logo.png" alt="RaceStream Solo" style="max-width: 200px; height: auto;">
+        </div>
 
         {% if message %}
         <div class="message {{ message_type }}">{{ message }}</div>

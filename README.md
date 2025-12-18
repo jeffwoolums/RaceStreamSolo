@@ -1,6 +1,12 @@
 # RaceStream Solo
 
-**Standalone Multi-Camera YouTube Streaming Device**
+<p align="center">
+  <img src="static/logo.png" alt="RaceStream Solo" width="300">
+</p>
+
+<p align="center">
+  <strong>Standalone Multi-Camera YouTube Streaming Device</strong>
+</p>
 
 Turn your Raspberry Pi into a professional multi-camera live streaming device. Connect USB cameras, configure via web UI, and stream directly to YouTube with automatic camera rotation.
 
