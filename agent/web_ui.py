@@ -22,6 +22,9 @@ HTML_TEMPLATE = '''
 <head>
     <title>RaceStream Solo</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% if auto_refresh %}
+    <meta http-equiv="refresh" content="3;url=/">
+    {% endif %}
     <style>
         * { box-sizing: border-box; }
         body {
@@ -439,7 +442,8 @@ def index():
     log_content = get_log_content()
     detected_cameras = request.args.get('show_cameras') == '1'
     cameras = camera_manager.detect_cameras() if detected_cameras else []
-    return render_template_string(HTML_TEMPLATE, config=config, status=status, message=message, message_type=message_type, log_content=log_content, detected_cameras=cameras)
+    auto_refresh = request.args.get('refresh') == '1'
+    return render_template_string(HTML_TEMPLATE, config=config, status=status, message=message, message_type=message_type, log_content=log_content, detected_cameras=cameras, auto_refresh=auto_refresh)
 
 @app.route('/save', methods=['POST'])
 def save():
@@ -476,7 +480,7 @@ def save():
         start_new_session=True
     )
 
-    return redirect(url_for('index', message='Configuration saved! Restarting stream...', type='success'))
+    return redirect(url_for('index', message='Configuration saved! Restarting stream...', type='success', refresh='1'))
 
 @app.route('/start', methods=['POST'])
 def start():
@@ -494,7 +498,7 @@ def start():
         stderr=subprocess.STDOUT,
         start_new_session=True
     )
-    return redirect(url_for('index', message='Stream starting...', type='success'))
+    return redirect(url_for('index', message='Stream starting...', type='success', refresh='1'))
 
 @app.route('/stop', methods=['POST'])
 def stop():
@@ -522,7 +526,7 @@ def restart():
         stderr=subprocess.STDOUT,
         start_new_session=True
     )
-    return redirect(url_for('index', message='Stream restarting...', type='success'))
+    return redirect(url_for('index', message='Stream restarting...', type='success', refresh='1'))
 
 @app.route('/switch', methods=['POST'])
 def switch():
